@@ -12,7 +12,8 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import com.android.volley.Request
-import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.VolleyError
+import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import org.json.JSONObject
 
@@ -73,15 +74,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun postToSlack(jsonObject: JSONObject) {
-        Volley.newRequestQueue(this).add(JsonObjectRequest(
+        Volley.newRequestQueue(this).add(JsonPostStringRequest(
                 Request.Method.POST, webhookEditText!!.text.toString(), jsonObject,
                 { response ->
-                    Toast.makeText(this@MainActivity, "success! " + response?.toString(), Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity, "success! " + response, Toast.LENGTH_LONG).show()
                 }, { error ->
-                    val message = error.networkResponse?.let { " ${it.statusCode}\n${String(it.data)}" } ?: ""
-                    Toast.makeText(this@MainActivity, error.toString() + message, Toast.LENGTH_LONG).show()
-            })
+            val message = error.networkResponse?.let { " ${it.statusCode}\n${String(it.data)}" } ?: ""
+            Toast.makeText(this@MainActivity, error.toString() + message, Toast.LENGTH_LONG).show()
+        })
         )
+    }
+
+    inner class JsonPostStringRequest(method: Int, url: String, private val jsonObject: JSONObject, listener: ((String) -> Unit),
+                                      errorListener: ((VolleyError) -> Unit)) : StringRequest(method, url, listener, errorListener) {
+
+        override fun getBody(): ByteArray? {
+            return jsonObject.toString().toByteArray()
+        }
+
+        override fun getBodyContentType(): String? {
+            return "application/json"
+        }
     }
 
     inner class JsonTextWatcher : TextWatcher {
