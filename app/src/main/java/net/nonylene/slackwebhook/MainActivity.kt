@@ -1,6 +1,8 @@
 package net.nonylene.slackwebhook
 
+import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.preference.PreferenceManager
@@ -29,6 +31,8 @@ class MainActivity : AppCompatActivity() {
     private var userEmojiEditText: EditText? = null
     private var textEditText: EditText? = null
     private var jsonTextView: TextView? = null
+
+    private var postMenu: MenuItem? = null
     private var sharedPreferences: SharedPreferences? = null
 
 
@@ -60,6 +64,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
+        postMenu = menu.findItem(R.id.postButton)
         return true
     }
 
@@ -67,6 +72,10 @@ class MainActivity : AppCompatActivity() {
         when (item?.itemId) {
             R.id.postButton -> {
                 postToSlack(slackJson)
+                return true
+            }
+            R.id.slackButton -> {
+                openSlack()
                 return true
             }
         }
@@ -78,11 +87,28 @@ class MainActivity : AppCompatActivity() {
                 Request.Method.POST, webhookEditText!!.text.toString(), jsonObject,
                 { response ->
                     Toast.makeText(this@MainActivity, "success! " + response, Toast.LENGTH_LONG).show()
+                    changeLoading(false)
                 }, { error ->
             val message = error.networkResponse?.let { " ${it.statusCode}\n${String(it.data)}" } ?: ""
             Toast.makeText(this@MainActivity, error.toString() + message, Toast.LENGTH_LONG).show()
+            changeLoading(false)
         })
         )
+        changeLoading(true)
+    }
+
+    private fun openSlack() {
+        startActivity(packageManager.getLaunchIntentForPackage("com.Slack")
+                ?: Intent(Intent.ACTION_VIEW, Uri.parse("https://my.slack.com/")))
+    }
+
+    private fun changeLoading(isLoading: Boolean) {
+        if (isLoading) {
+            postMenu!!.setActionView(R.layout.menu_progress)
+            postMenu!!.setEnabled(!isLoading)
+        } else {
+            supportInvalidateOptionsMenu()
+        }
     }
 
     inner class JsonPostStringRequest(method: Int, url: String, private val jsonObject: JSONObject, listener: ((String) -> Unit),
